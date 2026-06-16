@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodeflow-api:latest
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - LOG_LEVEL=info
+      - STORAGE_PROVIDER=local
+    ports:
+      - "4000:4000"
+    volumes:
+      - nodeflow-uploads:/app/uploads
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: nodeflow-worker:latest
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - LOG_LEVEL=info
+      - STORAGE_PROVIDER=local
+    volumes:
+      - nodeflow-uploads:/app/uploads
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER:-nodeflow}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-nodeflow}
+      - POSTGRES_DB=${DB_NAME:-nodeflow}
+    volumes:
+      - nodeflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-nodeflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - nodeflow-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nodeflow-db:
+  nodeflow-redis:
+  nodeflow-uploads:

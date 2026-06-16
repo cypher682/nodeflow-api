@@ -1,0 +1,106 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nodeflow
+          POSTGRES_PASSWORD: nodeflow
+          POSTGRES_DB: nodeflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Generate Prisma client
+        run: npx prisma generate
+        
+      - name: Run linter
+        run: npm run lint
+        
+      - name: Build TypeScript
+        run: npm run build
+        
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        env:
+          DATABASE_URL: "postgresql://nodeflow:nodeflow@localhost:5432/nodeflow"
+          REDIS_URL: "redis://localhost:6379"
+
+  docker-build:
+    name: Build & Scan Docker Images
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build API Image
+        run: docker build -t nodeflow-api:latest -f Dockerfile .
+        
+      - name: Build Worker Image
+        run: docker build -t nodeflow-worker:latest -f Dockerfile.worker .
+        
+      - name: Run Trivy vulnerability scanner on API
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'nodeflow-api:latest'
+          format: 'table'
+          exit-code: '0' # Don't fail build on vulnerabilities for portfolio
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Run Trivy vulnerability scanner on Worker
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'nodeflow-worker:latest'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+  deploy:
+    name: Deploy to Railway
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Trigger Railway Deploy
+        run: |
+          echo "Railway deployment would be triggered here using RAILWAY_TOKEN"
+          # curl -X POST "https://backboard.railway.app/graphql/v2" -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" ...
