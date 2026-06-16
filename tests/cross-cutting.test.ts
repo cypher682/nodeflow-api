@@ -38,6 +38,7 @@ const mockRedisClient = createRedisClient() as jest.Mocked<ReturnType<typeof cre
 describe("Cross-cutting middlewares", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRedisClient.incr.mockResolvedValue(1);
   });
 
   describe("API Version Header", () => {
@@ -101,6 +102,7 @@ describe("Cross-cutting middlewares", () => {
     it("should allow requests with valid api key", async () => {
       (prisma.apiKey.findUnique as jest.Mock).mockResolvedValue(validKey);
       (prisma.apiKey.findMany as jest.Mock).mockResolvedValue([validKey]);
+      (prisma.apiKey.update as jest.Mock).mockResolvedValue(validKey);
       
       const response = await request(createApp())
         .get("/v1/api-keys")
