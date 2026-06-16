@@ -3,7 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 
 FROM base AS deps
-RUN npm ci
+RUN npm install
 
 FROM deps AS build
 COPY . .
@@ -15,7 +15,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 RUN addgroup -S nodeflow && adduser -S nodeflow -G nodeflow
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 USER nodeflow
