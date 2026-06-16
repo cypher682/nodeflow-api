@@ -2,7 +2,7 @@
 
 A production-grade **developer workflow automation API** — built as an F4-level portfolio project to showcase backend, DevOps, and systems design skills.
 
-[![CI/CD](https://github.com/your-org/nodeflow-api/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/nodeflow-api/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/cypher682/nodeflow-api/actions/workflows/ci.yml/badge.svg)](https://github.com/cypher682/nodeflow-api/actions/workflows/ci.yml)
 
 ---
 
@@ -78,7 +78,7 @@ NodeFlow is a backend platform that lets developers automate workflows via:
 
 ```bash
 # 1. Clone and install
-git clone <repo-url>
+git clone https://github.com/cypher682/nodeflow-api.git
 cd nodeflow-api
 npm install
 
