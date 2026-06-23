@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NodeFlow Interactive Local Demo UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Socket.io client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="dark-theme">
+  <div class="glow-bg"></div>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo">
+        <span class="icon">⚡</span>
+        <h1>NodeFlow<span>.io</span></h1>
+      </div>
+      <div class="badge">Local Dev & Evidence Console</div>
+    </div>
+  </header>
+
+  <main class="app-container">
+    <!-- Sidebar / Connection Control -->
+    <aside class="sidebar">
+      <section class="card connection-card">
+        <h3>Server Control</h3>
+        <div class="form-group">
+          <label for="apiUrl">API Base URL</label>
+          <input type="text" id="apiUrl" value="http://localhost:4000" placeholder="http://localhost:4000">
+        </div>
+        <div class="form-group">
+          <label for="apiKey">API Key (Bearer)</label>
+          <div class="input-action-group">
+            <input type="password" id="apiKey" placeholder="Unauthenticated (Click Bootstrap)">
+            <button id="btnToggleKey" type="button" class="btn-icon">👁️</button>
+          </div>
+        </div>
+        <div class="button-group">
+          <button id="btnBootstrapKey" class="btn btn-primary btn-full">Bootstrap Test Key</button>
+        </div>
+        <div class="status-indicator-group">
+          <div class="status-row">
+            <span>HTTP API Status:</span>
+            <span id="apiStatus" class="status-badge status-offline">Checking...</span>
+          </div>
+          <div class="status-row">
+            <span>WebSocket Client:</span>
+            <span id="wsStatus" class="status-badge status-offline">Disconnected</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Links -->
+      <section class="card links-card">
+        <h3>Quick Navigation</h3>
+        <ul class="nav-links">
+          <li><a href="#section-jobs" class="active">⚙️ Job Queue</a></li>
+          <li><a href="#section-webhooks">🪝 Webhook Engine</a></li>
+          <li><a href="#section-files">📁 File Pipeline</a></li>
+          <li><a href="#section-advanced">🛡️ Abuse & Resiliency</a></li>
+        </ul>
+        <div class="links-footer">
+          <a href="http://localhost:4000/docs" target="_blank" class="text-link">Open Swagger API Docs ↗</a><br>
+          <a href="http://localhost:4000/admin/queues" target="_blank" class="text-link">Open Bull Board Queue Dashboard ↗</a>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="content-area">
+      <!-- JOB QUEUE SYSTEM -->
+      <section id="section-jobs" class="content-section active">
+        <div class="section-header">
+          <h2>⚙️ Job Queue System</h2>
+          <p class="subtitle">Offload slow operations (BullMQ + Redis) and track them in real-time via WebSockets.</p>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card form-card">
+            <h3>Submit New Background Job</h3>
+            <form id="jobForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="jobType">Job Type</label>
+                  <select id="jobType">
+                    <option value="file.metadata.extract">file.metadata.extract</option>
+                    <option value="webhook.dispatcher">webhook.dispatcher</option>
+                    <option value="notification.send">notification.send</option>
+                    <option value="system.cleanup">system.cleanup</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="jobPriority">Priority (1-10)</label>
+                  <input type="number" id="jobPriority" value="5" min="1" max="10">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="jobPayload">Payload (JSON)</label>
+                <textarea id="jobPayload" class="code-font" rows="5">{"fileId": "file_test_99", "reason": "user_requested"}</textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="jobIdempotency">Idempotency Key (Optional)</label>
+                  <input type="text" id="jobIdempotency" placeholder="e.g. idem-job-001">
+                </div>
+                <div class="form-group">
+                  <label for="jobMaxAttempts">Max Attempts</label>
+                  <input type="number" id="jobMaxAttempts" value="3" min="1" max="10">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-accent btn-full">Queue Job (POST /v1/jobs)</button>
+            </form>
+          </div>
+
+          <div class="card display-card">
+            <h3>Active Job Monitor</h3>
+            <div id="jobMonitorEmpty" class="empty-state">
+              <p>No job currently monitored. Submit a job or enter an ID below to connect WebSockets.</p>
+              <div class="input-action-group mt-2">
+                <input type="text" id="monitorJobId" placeholder="Enter Job ID to monitor">
+                <button id="btnMonitorJob" class="btn btn-secondary">Connect</button>
+              </div>
+            </div>
+            <div id="jobMonitorActive" class="monitor-details hidden">
+              <div class="monitor-header">
+                <div class="monitor-title">
+                  <span id="activeJobType" class="job-type-badge">TYPE</span>
+                  <code id="activeJobId">job_id</code>
+                </div>
+                <div id="activeJobStatus" class="status-badge status-queued">QUEUED</div>
+              </div>
+              <div class="progress-bar-container">
+                <div id="activeJobProgress" class="progress-bar" style="width: 0%"></div>
+              </div>
+              <div class="monitor-info mt-2">
+                <div class="info-row"><span>Attempts:</span><strong id="activeJobAttempts">0/3</strong></div>
+                <div class="info-row"><span>Created At:</span><span id="activeJobCreated">--</span></div>
+              </div>
+              <div class="log-box-title">Job Run Logs (Live WebSocket Stream):</div>
+              <div id="activeJobLogs" class="log-terminal">
+                <span class="system-log">[SYSTEM] Waiting for socket events...</span>
+              </div>
+              <div class="button-row mt-2">
+                <button id="btnCancelJob" class="btn btn-danger">Cancel Job (DELETE)</button>
+                <button id="btnRefreshJob" class="btn btn-secondary">Poll State (GET)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <h3>Jobs Registry (Cursor-based Pagination)</h3>
+          <div class="form-inline mb-2">
+            <select id="filterJobStatus">
+              <option value="">All Statuses</option>
+              <option value="QUEUED">QUEUED</option>
+              <option value="RUNNING">RUNNING</option>
+              <option value="SUCCEEDED">SUCCEEDED</option>
+              <option value="FAILED">FAILED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+            <input type="number" id="jobsLimit" value="5" min="1" max="50" style="width: 80px;">
+            <button id="btnFetchJobs" class="btn btn-secondary">Load Jobs</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Job ID</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Attempts</th>
+                  <th>Created At</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="jobsTableBody">
+                <tr><td colspan="7" class="text-center text-muted">Click Load Jobs to query the database.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination-footer hidden" id="jobsPagination">
+            <button id="btnNextJobs" class="btn btn-small">Load More (Next Cursor) ⬇</button>
+            <code id="nextJobsCursor" class="cursor-badge">--</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- WEBHOOK DELIVERY ENGINE -->
+      <section id="section-webhooks" class="content-section">
+        <div class="section-header">
+          <h2>🪝 Webhook Delivery Engine</h2>
+          <p class="subtitle">Register webhooks, receive signed HMAC-SHA256 event payloads, and inspect logs.</p>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card form-card">
+            <h3>Register Webhook Destination</h3>
+            <form id="webhookForm">
+              <div class="form-group">
+                <label for="webhookUrl">Target URL</label>
+                <input type="url" id="webhookUrl" value="https://httpbin.org/post" placeholder="https://yourserver.com/webhooks" required>
+              </div>
+              <div class="form-group">
+                <label>Subscribed Events</label>
+                <div class="checkbox-group">
+                  <label><input type="checkbox" name="webhookEvents" value="job.queued" checked> job.queued</label>
+                  <label><input type="checkbox" name="webhookEvents" value="job.completed" checked> job.completed</label>
+                  <label><input type="checkbox" name="webhookEvents" value="job.failed" checked> job.failed</label>
+                  <label><input type="checkbox" name="webhookEvents" value="file.processed" checked> file.processed</label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-accent btn-full">Register Webhook (POST /v1/webhooks)</button>
+            </form>
+          </div>
+
+          <div class="card display-card">
+            <h3>Webhook Registrations</h3>
+            <div class="button-group mb-2">
+              <button id="btnFetchWebhooks" class="btn btn-secondary btn-small">Refresh Webhooks</button>
+            </div>
+            <div id="webhooksList" class="records-list">
+              <div class="empty-state">No webhooks registered. Add one to see active secrets.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <h3>Outbound Webhook Deliveries Log</h3>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Delivery ID</th>
+                  <th>Webhook ID</th>
+                  <th>Event</th>
+                  <th>Status</th>
+                  <th>Attempts</th>
+                  <th>Response</th>
+                  <th>Next Attempt</th>
+                </tr>
+              </thead>
+              <tbody id="webhookDeliveriesBody">
+                <tr><td colspan="7" class="text-center text-muted">Register a webhook and trigger a job to see delivery history.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- FILE PIPELINE -->
+      <section id="section-files" class="content-section">
+        <div class="section-header">
+          <h2>📁 File Processing Pipeline</h2>
+          <p class="subtitle">Upload files, store them via pluggable storage, and trigger metadata extraction workers.</p>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card form-card">
+            <h3>Upload File</h3>
+            <form id="fileForm" enctype="multipart/form-data">
+              <div class="form-group">
+                <label for="fileUploadInput">Select File</label>
+                <input type="file" id="fileUploadInput" required>
+              </div>
+              <button type="submit" class="btn btn-accent btn-full">Upload and Process (POST /v1/files)</button>
+            </form>
+          </div>
+
+          <div class="card display-card">
+            <h3>Uploaded Files Registry</h3>
+            <div class="button-group mb-2">
+              <button id="btnFetchFiles" class="btn btn-secondary btn-small">Refresh Registry</button>
+            </div>
+            <div id="filesList" class="records-list">
+              <div class="empty-state">No files uploaded.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABUSE & RESILIENCY -->
+      <section id="section-advanced" class="content-section">
+        <div class="section-header">
+          <h2>🛡️ Abuse & Resiliency</h2>
+          <p class="subtitle">Validate rate limits, test request idempotency, and check API response headers.</p>
+        </div>
+
+        <div class="grid-3col">
+          <!-- Rate Limiter -->
+          <div class="card">
+            <h3>Redis Rate Limiter</h3>
+            <p class="card-desc text-muted mb-2">Simulate rapid API queries to trigger the 429 Too Many Requests response.</p>
+            <div class="rate-tester-box">
+              <button id="btnTestRateLimit" class="btn btn-primary btn-full">Fire Request (GET /v1)</button>
+              <div class="headers-info mt-2">
+                <div class="info-row"><span>Limit:</span><strong id="headerLimit">--</strong></div>
+                <div class="info-row"><span>Remaining:</span><strong id="headerRemaining">--</strong></div>
+                <div class="info-row"><span>Reset (Retry-After):</span><strong id="headerReset">--</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Idempotency Tester -->
+          <div class="card">
+            <h3>Request Idempotency</h3>
+            <p class="card-desc text-muted mb-2">Send multiple identical POST requests with the same Idempotency-Key.</p>
+            <div class="form-group">
+              <label for="idemKeyInput">Idempotency-Key Header</label>
+              <div class="input-action-group">
+                <input type="text" id="idemKeyInput" value="idem-test-999">
+                <button id="btnGenIdemKey" class="btn-icon">🔄</button>
+              </div>
+            </div>
+            <button id="btnTestIdempotency" class="btn btn-accent btn-full">Send Mutating POST</button>
+          </div>
+
+          <!-- Version Negotiator -->
+          <div class="card">
+            <h3>Version Negotiation</h3>
+            <p class="card-desc text-muted mb-2">Test Express server version routing by requesting specific headers.</p>
+            <div class="form-group">
+              <label for="reqVersion">X-Accept-Version Header</label>
+              <select id="reqVersion">
+                <option value="v1">v1 (Default)</option>
+                <option value="v2">v2 (Deprecated)</option>
+                <option value="invalid">v3 (Invalid)</option>
+              </select>
+            </div>
+            <button id="btnTestVersion" class="btn btn-secondary btn-full">Send Versioned Request</button>
+          </div>
+        </div>
+
+        <!-- Raw Console / Response Logger -->
+        <div class="card mt-3">
+          <div class="card-header-flex">
+            <h3>API HTTP Traffic Console</h3>
+            <button id="btnClearTraffic" class="btn btn-small btn-secondary">Clear Console</button>
+          </div>
+          <div id="trafficConsole" class="log-terminal">
+            <span class="system-log">[SYSTEM] API Console Initialized. Trigger actions above to inspect RAW request/response payloads.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>NodeFlow API DevOps Portfolio Project · Suleiman Abdulrahman</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

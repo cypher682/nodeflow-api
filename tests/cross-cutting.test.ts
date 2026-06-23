@@ -39,6 +39,7 @@ describe("Cross-cutting middlewares", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRedisClient.incr.mockResolvedValue(1);
+    mockRedisClient.ttl.mockResolvedValue(60);
   });
 
   describe("API Version Header", () => {

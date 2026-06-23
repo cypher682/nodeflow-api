@@ -3,9 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: npm run dev
+      target: build
+    command: sh -c "npm run prisma:deploy && npm run dev"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://nodeflow:nodeflow@postgres:5432/nodeflow?schema=public
+      REDIS_URL: redis://redis:6379
     ports:
       - "4000:4000"
     volumes:
@@ -21,9 +25,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+      target: build
     command: npm run dev:worker
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://nodeflow:nodeflow@postgres:5432/nodeflow?schema=public
+      REDIS_URL: redis://redis:6379
     volumes:
       - .:/app
       - /app/node_modules
@@ -40,7 +48,7 @@ services:
       POSTGRES_PASSWORD: nodeflow
       POSTGRES_DB: nodeflow
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -52,7 +60,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6385:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

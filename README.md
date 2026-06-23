@@ -83,7 +83,7 @@ cd nodeflow-api
 npm install
 
 # 2. Start infrastructure
-docker compose up -d db redis
+docker compose up -d postgres redis
 
 # 3. Run Prisma migrations
 npx prisma migrate dev
@@ -150,6 +150,7 @@ docker compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 ### API Keys
 | Method | Path | Description |
 |---|---|---|
+| POST | `/v1/bootstrap` | Generate a dev API key instantly (dev only) |
 | POST | `/v1/api-keys` | Create key (returns raw key once) |
 | GET | `/v1/api-keys` | List keys (masked) |
 | DELETE | `/v1/api-keys/:id` | Revoke key |
@@ -217,3 +218,9 @@ npm run build             # TypeScript compile
 | `LOG_LEVEL` | `info` | Winston log level |
 | `STORAGE_PROVIDER` | `local` | `local` or `s3` |
 | `API_BASE_URL` | `http://localhost:4000` | Public base URL (used in Swagger) |
+
+---
+
+## Note on Repository Contents
+
+This repository strictly contains only the source code and configuration files necessary to build and run the NodeFlow API. Temporary files, external UI test scripts, or local testing artifacts (like downloaded markdown files) are deliberately excluded via `.gitignore` to maintain a clean, production-ready codebase.
