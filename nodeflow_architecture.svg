@@ -1,0 +1,313 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" font-family="'Segoe UI', Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="apiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f1a3a"/>
+      <stop offset="100%" style="stop-color:#1a2a5e"/>
+    </linearGradient>
+    <linearGradient id="queueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d1500"/>
+      <stop offset="100%" style="stop-color:#5c2d00"/>
+    </linearGradient>
+    <linearGradient id="workerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a2810"/>
+      <stop offset="100%" style="stop-color:#14401c"/>
+    </linearGradient>
+    <linearGradient id="pgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f1e40"/>
+      <stop offset="100%" style="stop-color:#1a3060"/>
+    </linearGradient>
+    <linearGradient id="redisGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d0a0a"/>
+      <stop offset="100%" style="stop-color:#5c1515"/>
+    </linearGradient>
+    <linearGradient id="socketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00261f"/>
+      <stop offset="100%" style="stop-color:#003d32"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="glowBlue">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4f9eff"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f87171"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2dd4bf"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="860" fill="url(#bg)"/>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff07" stroke-width="1"/>
+  </pattern>
+  <rect width="1200" height="860" fill="url(#grid)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="70" fill="#161b22" opacity="0.95"/>
+  <rect x="0" y="68" width="1200" height="2" fill="#3b82f6" opacity="0.7"/>
+
+  <!-- Logo -->
+  <rect x="36" y="15" width="38" height="38" rx="8" fill="#3b82f6" filter="url(#glowBlue)"/>
+  <text x="55" y="39" text-anchor="middle" font-size="16" fill="white" font-weight="800">NF</text>
+  <text x="88" y="34" font-size="22" font-weight="700" fill="#e2e8f0">NodeFlow API</text>
+  <text x="88" y="55" font-size="12" fill="#3b82f6">Node.js · TypeScript · Express 5 · BullMQ · Socket.io · Prisma · PostgreSQL · Redis · Docker · GitHub Actions</text>
+
+  <!-- Badges -->
+  <rect x="1000" y="18" width="82" height="22" rx="11" fill="#3b82f6" opacity="0.15" stroke="#3b82f6" stroke-width="1"/>
+  <text x="1041" y="33" text-anchor="middle" font-size="10" fill="#60a5fa">Node.js 20</text>
+  <rect x="1094" y="18" width="90" height="22" rx="11" fill="#8b5cf6" opacity="0.15" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="1139" y="33" text-anchor="middle" font-size="10" fill="#a78bfa">TypeScript 5</text>
+
+  <!-- ─────────────────────────── CLIENT LAYER ─────────────────────────── -->
+
+  <!-- REST Client -->
+  <rect x="60" y="100" width="175" height="75" rx="12" fill="#161b22" stroke="#4f9eff" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="70" y="122" font-size="10" fill="#94a3b8">CLIENT</text>
+  <text x="147" y="140" text-anchor="middle" font-size="22">💻</text>
+  <text x="147" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#bfdbfe">REST Client</text>
+
+  <!-- WebSocket Client -->
+  <rect x="260" y="100" width="175" height="75" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="270" y="122" font-size="10" fill="#94a3b8">REALTIME</text>
+  <text x="347" y="140" text-anchor="middle" font-size="22">⚡</text>
+  <text x="347" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#a5f3fc">WebSocket Client</text>
+
+  <!-- External Webhook Target -->
+  <rect x="900" y="100" width="220" height="75" rx="12" fill="#161b22" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="6,3" filter="url(#shadow)"/>
+  <text x="910" y="122" font-size="10" fill="#94a3b8">EXTERNAL · TARGET</text>
+  <text x="1010" y="140" text-anchor="middle" font-size="22">🌐</text>
+  <text x="1010" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#fdba74">Webhook Endpoints</text>
+
+  <!-- ─────────────────────────── API LAYER ─────────────────────────── -->
+
+  <!-- API box -->
+  <rect x="60" y="220" width="1080" height="260" rx="16" fill="url(#apiGrad)" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="60" y="220" width="1080" height="36" rx="16" fill="#3b82f6" opacity="0.18"/>
+  <rect x="60" y="240" width="1080" height="16" fill="#3b82f6" opacity="0.1"/>
+  <text x="600" y="244" text-anchor="middle" font-size="17" font-weight="700" fill="#93c5fd">NodeFlow API  —  Express 5  /  TypeScript  /  Port :4000</text>
+
+  <!-- Middleware bar -->
+  <rect x="85" y="263" width="1030" height="26" rx="6" fill="#1e2d50" stroke="#3b82f6" stroke-width="1" opacity="0.9"/>
+  <text x="600" y="280" text-anchor="middle" font-size="10.5" fill="#60a5fa">🔑  API Key Auth (SHA-256 hashed)  ·  Redis sliding-window Rate Limiting  ·  Idempotency-Key header  ·  HMAC-SHA256 Webhook Signing</text>
+
+  <!-- Route: Jobs -->
+  <rect x="90" y="300" width="195" height="165" rx="10" fill="#0d1a35" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="90" y="300" width="195" height="26" rx="10" fill="#3b82f6" opacity="0.25"/>
+  <text x="187" y="317" text-anchor="middle" font-size="12" font-weight="600" fill="#bfdbfe">Jobs  /v1/jobs</text>
+  <text x="187" y="342" text-anchor="middle" font-size="10" fill="#60a5fa">POST  /v1/jobs</text>
+  <text x="187" y="358" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/jobs  (paginated)</text>
+  <text x="187" y="374" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/jobs/:id</text>
+  <text x="187" y="390" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/jobs/:id/logs</text>
+  <text x="187" y="406" text-anchor="middle" font-size="10" fill="#94a3b8">DELETE /v1/jobs/:id</text>
+  <text x="187" y="430" text-anchor="middle" font-size="9" fill="#3b82f6">BullMQ async · DB-backed state</text>
+  <text x="187" y="445" text-anchor="middle" font-size="9" fill="#94a3b8">QUEUED→RUNNING→DONE</text>
+  <text x="187" y="458" text-anchor="middle" font-size="9" fill="#94a3b8">Retries · Concurrency · Logs</text>
+
+  <!-- Route: Webhooks -->
+  <rect x="300" y="300" width="200" height="165" rx="10" fill="#0d1a35" stroke="#fb923c" stroke-width="1.5"/>
+  <rect x="300" y="300" width="200" height="26" rx="10" fill="#fb923c" opacity="0.2"/>
+  <text x="400" y="317" text-anchor="middle" font-size="12" font-weight="600" fill="#fed7aa">Webhooks</text>
+  <text x="400" y="342" text-anchor="middle" font-size="10" fill="#fb923c">POST  /v1/webhooks</text>
+  <text x="400" y="358" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/webhooks</text>
+  <text x="400" y="374" text-anchor="middle" font-size="10" fill="#94a3b8">PATCH /v1/webhooks/:id</text>
+  <text x="400" y="390" text-anchor="middle" font-size="10" fill="#94a3b8">DELETE /v1/webhooks/:id</text>
+  <text x="400" y="406" text-anchor="middle" font-size="10" fill="#94a3b8">GET deliveries/:id/deliveries</text>
+  <text x="400" y="430" text-anchor="middle" font-size="9" fill="#fb923c">HMAC-SHA256 signed payloads</text>
+  <text x="400" y="445" text-anchor="middle" font-size="9" fill="#94a3b8">Exp. backoff · circuit breaker</text>
+
+  <!-- Route: Files -->
+  <rect x="516" y="300" width="195" height="165" rx="10" fill="#0d1a35" stroke="#a855f7" stroke-width="1.5"/>
+  <rect x="516" y="300" width="195" height="26" rx="10" fill="#a855f7" opacity="0.22"/>
+  <text x="613" y="317" text-anchor="middle" font-size="12" font-weight="600" fill="#e9d5ff">Files  /v1/files</text>
+  <text x="613" y="342" text-anchor="middle" font-size="10" fill="#a855f7">POST  /v1/files  (multipart)</text>
+  <text x="613" y="358" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/files</text>
+  <text x="613" y="374" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/files/:id</text>
+  <text x="613" y="390" text-anchor="middle" font-size="10" fill="#94a3b8">GET   /v1/files/:id/download</text>
+  <text x="613" y="406" text-anchor="middle" font-size="10" fill="#94a3b8">DELETE /v1/files/:id (soft)</text>
+  <text x="613" y="430" text-anchor="middle" font-size="9" fill="#a855f7">Multer · pluggable storage</text>
+  <text x="613" y="445" text-anchor="middle" font-size="9" fill="#94a3b8">Local / S3 interface</text>
+
+  <!-- Route: API Keys -->
+  <rect x="727" y="300" width="195" height="165" rx="10" fill="#0d1a35" stroke="#eab308" stroke-width="1.5"/>
+  <rect x="727" y="300" width="195" height="26" rx="10" fill="#eab308" opacity="0.18"/>
+  <text x="824" y="317" text-anchor="middle" font-size="12" font-weight="600" fill="#fef08a">API Keys</text>
+  <text x="824" y="342" text-anchor="middle" font-size="10" fill="#eab308">POST /v1/api-keys</text>
+  <text x="824" y="358" text-anchor="middle" font-size="10" fill="#94a3b8">GET  /v1/api-keys  (masked)</text>
+  <text x="824" y="374" text-anchor="middle" font-size="10" fill="#94a3b8">DELETE /v1/api-keys/:id</text>
+  <text x="824" y="390" text-anchor="middle" font-size="10" fill="#94a3b8">POST /v1/bootstrap  (dev)</text>
+  <text x="824" y="420" text-anchor="middle" font-size="9" fill="#eab308">SHA-256 hashed storage</text>
+  <text x="824" y="436" text-anchor="middle" font-size="9" fill="#94a3b8">Key rotation support</text>
+
+  <!-- Admin box -->
+  <rect x="938" y="300" width="184" height="165" rx="10" fill="#0d1a35" stroke="#6b7280" stroke-width="1.5"/>
+  <rect x="938" y="300" width="184" height="26" rx="10" fill="#6b7280" opacity="0.2"/>
+  <text x="1030" y="317" text-anchor="middle" font-size="12" font-weight="600" fill="#d1d5db">Admin</text>
+  <text x="1030" y="342" text-anchor="middle" font-size="10" fill="#9ca3af">/admin/queues</text>
+  <text x="1030" y="358" text-anchor="middle" font-size="10" fill="#94a3b8">Bull Board dashboard</text>
+  <text x="1030" y="378" text-anchor="middle" font-size="10" fill="#9ca3af">/docs</text>
+  <text x="1030" y="394" text-anchor="middle" font-size="10" fill="#94a3b8">Swagger UI</text>
+  <text x="1030" y="424" text-anchor="middle" font-size="9" fill="#6b7280">CI: lint · build · test</text>
+  <text x="1030" y="440" text-anchor="middle" font-size="9" fill="#6b7280">Docker · Trivy scan</text>
+  <text x="1030" y="456" text-anchor="middle" font-size="9" fill="#6b7280">31 tests · 7 suites</text>
+
+  <!-- ─────────────────────────── QUEUE LAYER ─────────────────────────── -->
+
+  <!-- BullMQ -->
+  <rect x="350" y="530" width="340" height="130" rx="12" fill="url(#queueGrad)" stroke="#f97316" stroke-width="2" filter="url(#shadow)"/>
+  <text x="366" y="552" font-size="10" fill="#94a3b8">MESSAGE QUEUE  (Redis-backed)</text>
+  <text x="520" y="567" text-anchor="middle" font-size="16" font-weight="700" fill="#fb923c">BullMQ Queues</text>
+
+  <rect x="368" y="575" width="90" height="38" rx="6" fill="#5c2d00" stroke="#f97316" stroke-width="1"/>
+  <text x="413" y="594" text-anchor="middle" font-size="10" fill="#fb923c">jobProcessing</text>
+  <text x="413" y="608" text-anchor="middle" font-size="9" fill="#94a3b8">concurrency</text>
+
+  <rect x="470" y="575" width="100" height="38" rx="6" fill="#5c2d00" stroke="#f97316" stroke-width="1"/>
+  <text x="520" y="594" text-anchor="middle" font-size="10" fill="#fb923c">webhookDispatch</text>
+  <text x="520" y="608" text-anchor="middle" font-size="9" fill="#94a3b8">retries · backoff</text>
+
+  <rect x="582" y="575" width="95" height="38" rx="6" fill="#5c2d00" stroke="#f97316" stroke-width="1"/>
+  <text x="629" y="594" text-anchor="middle" font-size="10" fill="#fb923c">fileProcessing</text>
+  <text x="629" y="608" text-anchor="middle" font-size="9" fill="#94a3b8">metadata</text>
+
+  <text x="520" y="650" text-anchor="middle" font-size="9" fill="#94a3b8">Persistent queues · Dead-letter · Progress tracking</text>
+
+  <!-- ─────────────────────────── WORKER LAYER ─────────────────────────── -->
+
+  <!-- Workers -->
+  <rect x="740" y="530" width="400" height="130" rx="12" fill="url(#workerGrad)" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="756" y="552" font-size="10" fill="#94a3b8">WORKER PROCESS  (separate container)</text>
+  <text x="940" y="567" text-anchor="middle" font-size="16" font-weight="700" fill="#6ee7b7">Workers</text>
+
+  <rect x="756" y="575" width="108" height="70" rx="6" fill="#0a2810" stroke="#10b981" stroke-width="1"/>
+  <text x="810" y="597" text-anchor="middle" font-size="11" font-weight="600" fill="#34d399">Job Worker</text>
+  <text x="810" y="613" text-anchor="middle" font-size="9" fill="#94a3b8">Processes async</text>
+  <text x="810" y="627" text-anchor="middle" font-size="9" fill="#94a3b8">jobs with retries</text>
+  <text x="810" y="641" text-anchor="middle" font-size="9" fill="#10b981">structured logs</text>
+
+  <rect x="874" y="575" width="118" height="70" rx="6" fill="#0a2810" stroke="#10b981" stroke-width="1"/>
+  <text x="933" y="597" text-anchor="middle" font-size="11" font-weight="600" fill="#34d399">Webhook Worker</text>
+  <text x="933" y="613" text-anchor="middle" font-size="9" fill="#94a3b8">Signed dispatches</text>
+  <text x="933" y="627" text-anchor="middle" font-size="9" fill="#94a3b8">circuit breaker</text>
+  <text x="933" y="641" text-anchor="middle" font-size="9" fill="#10b981">delivery history</text>
+
+  <rect x="1002" y="575" width="120" height="70" rx="6" fill="#0a2810" stroke="#10b981" stroke-width="1"/>
+  <text x="1062" y="597" text-anchor="middle" font-size="11" font-weight="600" fill="#34d399">File Worker</text>
+  <text x="1062" y="613" text-anchor="middle" font-size="9" fill="#94a3b8">Metadata extract</text>
+  <text x="1062" y="627" text-anchor="middle" font-size="9" fill="#94a3b8">pluggable storage</text>
+  <text x="1062" y="641" text-anchor="middle" font-size="9" fill="#10b981">Local / S3</text>
+
+  <!-- ─────────────────────────── DATA LAYER ─────────────────────────── -->
+
+  <!-- PostgreSQL -->
+  <rect x="60" y="710" width="320" height="120" rx="12" fill="url(#pgGrad)" stroke="#3b82f6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="78" y="730" font-size="10" fill="#94a3b8">DATABASE  (Prisma ORM)</text>
+  <text x="220" y="752" text-anchor="middle" font-size="15" font-weight="700" fill="#93c5fd">PostgreSQL</text>
+  <text x="220" y="768" text-anchor="middle" font-size="10" fill="#94a3b8">Prisma ORM · Cursor-based pagination</text>
+  <text x="220" y="786" text-anchor="middle" font-size="10" fill="#60a5fa">Jobs · Logs · Webhooks · Deliveries</text>
+  <text x="220" y="802" text-anchor="middle" font-size="10" fill="#94a3b8">Files · API Keys (all state persisted)</text>
+  <text x="220" y="820" text-anchor="middle" font-size="9" fill="#3b82f6">npx prisma migrate deploy</text>
+
+  <!-- Redis -->
+  <rect x="410" y="710" width="290" height="120" rx="12" fill="url(#redisGrad)" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="428" y="730" font-size="10" fill="#94a3b8">CACHE · BROKER · PUB/SUB</text>
+  <text x="555" y="752" text-anchor="middle" font-size="15" font-weight="700" fill="#fca5a5">Redis</text>
+  <text x="555" y="770" text-anchor="middle" font-size="10" fill="#94a3b8">BullMQ broker + result backend</text>
+  <text x="555" y="786" text-anchor="middle" font-size="10" fill="#f87171">Socket.io pub/sub adapter</text>
+  <text x="555" y="802" text-anchor="middle" font-size="10" fill="#94a3b8">Rate limit sliding windows</text>
+  <text x="555" y="818" text-anchor="middle" font-size="9" fill="#ef4444">Cross-process real-time events</text>
+
+  <!-- Socket.io -->
+  <rect x="730" y="710" width="280" height="120" rx="12" fill="url(#socketGrad)" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="748" y="730" font-size="10" fill="#94a3b8">REAL-TIME</text>
+  <text x="870" y="752" text-anchor="middle" font-size="15" font-weight="700" fill="#99f6e4">Socket.io</text>
+  <text x="870" y="770" text-anchor="middle" font-size="10" fill="#94a3b8">Redis adapter for cross-process</text>
+  <text x="870" y="786" text-anchor="middle" font-size="10" fill="#2dd4bf">Real-time push per job update</text>
+  <text x="870" y="802" text-anchor="middle" font-size="10" fill="#94a3b8">No polling  ·  WebSocket events</text>
+  <text x="870" y="818" text-anchor="middle" font-size="9" fill="#2dd4bf">Clients receive instant status updates</text>
+
+  <!-- Docker Compose note -->
+  <rect x="1040" y="710" width="120" height="120" rx="12" fill="#161b22" stroke="#6b7280" stroke-width="1" filter="url(#shadow)"/>
+  <text x="1100" y="735" text-anchor="middle" font-size="22">🐳</text>
+  <text x="1100" y="756" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">Docker</text>
+  <text x="1100" y="772" text-anchor="middle" font-size="9" fill="#94a3b8">API container</text>
+  <text x="1100" y="786" text-anchor="middle" font-size="9" fill="#94a3b8">Worker container</text>
+  <text x="1100" y="800" text-anchor="middle" font-size="9" fill="#94a3b8">Postgres service</text>
+  <text x="1100" y="814" text-anchor="middle" font-size="9" fill="#94a3b8">Redis service</text>
+  <text x="1100" y="828" text-anchor="middle" font-size="9" fill="#6b7280">prod compose</text>
+
+  <!-- ─────────────────────────── ARROWS ─────────────────────────── -->
+
+  <!-- REST Client → API -->
+  <line x1="147" y1="175" x2="147" y2="218" stroke="#4f9eff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <rect x="63" y="189" width="110" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="118" y="201" text-anchor="middle" font-size="9" fill="#4f9eff">HTTPS REST</text>
+
+  <!-- WebSocket Client ↔ Socket.io -->
+  <line x1="347" y1="175" x2="347" y2="218" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowCyan)"/>
+  <rect x="264" y="189" width="110" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="319" y="201" text-anchor="middle" font-size="9" fill="#22d3ee">ws:// WebSocket</text>
+
+  <!-- API → BullMQ -->
+  <line x1="370" y1="480" x2="440" y2="528" stroke="#fb923c" stroke-width="2" marker-end="url(#arrowOrange)"/>
+  <rect x="362" y="497" width="90" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="407" y="509" text-anchor="middle" font-size="9" fill="#fb923c">enqueue jobs</text>
+
+  <!-- BullMQ → Workers -->
+  <line x1="690" y1="595" x2="738" y2="595" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <rect x="695" y="582" width="42" height="14" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="716" y="592" text-anchor="middle" font-size="8.5" fill="#10b981">process</text>
+
+  <!-- Workers → PostgreSQL (via long arrow) -->
+  <line x1="870" y1="660" x2="300" y2="710" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowBlue)"/>
+  <rect x="510" y="670" width="110" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="565" y="682" text-anchor="middle" font-size="9" fill="#3b82f6">Prisma state updates</text>
+
+  <!-- API → PostgreSQL -->
+  <line x1="220" y1="480" x2="220" y2="708" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+  <rect x="126" y="590" width="90" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="171" y="602" text-anchor="middle" font-size="9" fill="#3b82f6">Prisma queries</text>
+
+  <!-- Redis ↔ Socket.io -->
+  <line x1="700" y1="760" x2="728" y2="760" stroke="#2dd4bf" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <rect x="698" y="746" width="34" height="14" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="715" y="756" text-anchor="middle" font-size="8" fill="#2dd4bf">pub/sub</text>
+
+  <!-- API → Redis (rate limiting) -->
+  <line x1="600" y1="480" x2="555" y2="708" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowRed)"/>
+  <rect x="543" y="590" width="80" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="583" y="602" text-anchor="middle" font-size="9" fill="#ef4444">rate limits</text>
+
+  <!-- WebSocket ↔ Socket.io (longer) -->
+  <line x1="347" y1="175" x2="870" y2="708" stroke="#2dd4bf" stroke-width="1.2" stroke-dasharray="6,4" opacity="0.5" marker-end="url(#arrowTeal)"/>
+
+  <!-- Workers → External Webhooks -->
+  <line x1="1010" y1="575" x2="1010" y2="177" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowOrange)"/>
+  <rect x="1016" y="360" width="110" height="16" rx="3" fill="#0d1117" opacity="0.9"/>
+  <text x="1071" y="372" text-anchor="middle" font-size="9" fill="#fb923c">HTTP POST signed</text>
+
+  <!-- Footer -->
+  <text x="600" y="848" text-anchor="middle" font-size="10" fill="#4b5563">Built by cypher682 · nodeflow-api · Clouddevops Portfolio 2026 · 31 tests · 7 suites · GitHub Actions CI</text>
+</svg>

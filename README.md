@@ -1,226 +1,209 @@
-# NodeFlow API
-
-A production-grade **developer workflow automation API** — built as an F4-level portfolio project to showcase backend, DevOps, and systems design skills.
+# nodeflow-api
 
 [![CI/CD](https://github.com/cypher682/nodeflow-api/actions/workflows/ci.yml/badge.svg)](https://github.com/cypher682/nodeflow-api/actions/workflows/ci.yml)
 
+Asynchronous job orchestration and webhook delivery API built with Node.js, TypeScript, BullMQ, Socket.io, Prisma, PostgreSQL, Redis, Docker, and GitHub Actions.
+
+NodeFlow is a multi-process distributed backend service — not a CRUD API with a background task bolted on. Two separate Node.js processes share state through Redis and PostgreSQL with no direct coupling between them.
+
 ---
 
-## What it does
+## Highlights
 
-NodeFlow is a backend platform that lets developers automate workflows via:
+- Two-process architecture: Express API and BullMQ Worker as separate Node.js processes
+- Job lifecycle: `QUEUED` → `RUNNING` → `SUCCEEDED` / `FAILED` / `CANCELLED` with structured log entries
+- Real-time job status via Socket.io, bridged cross-process through Redis pub/sub
+- Webhook engine: HMAC-SHA256 signatures, exponential backoff, Redis circuit breaker
+- Idempotency middleware: `Idempotency-Key` caches responses in Postgres — safe replay, no duplicate side effects
+- File upload pipeline with pluggable storage interface (`LocalStorageProvider` / S3-ready)
+- API key authentication with SHA-256 hashed keys — plaintext never stored
+- Redis sliding-window rate limiting with standard `X-RateLimit-*` headers
+- API versioning middleware with deprecation headers
+- Bull Board visual queue dashboard at `/admin/queues`
+- 31 tests across 7 suites
+- GitHub Actions CI: lint → TypeScript build → Jest → Docker build (API + Worker) → Trivy scan
 
-- **Job Queue** — Create async jobs with concurrency, retries, and structured logging
-- **Real-time Updates** — WebSocket push events per job (no polling needed)
-- **Webhook Engine** — Register endpoint URLs, receive signed payloads on job events
-- **File Pipeline** — Upload files → background processing → metadata extraction
-- **API Keys** — Secure access with bearer tokens, key rotation support
-- **Rate Limiting** — Per-user Redis sliding-window rate limits
-- **Idempotency** — Safely replay POST requests without side-effects
+---
+
+## Tech Stack
+
+| Area | Tools |
+|---|---|
+| API | Node.js, TypeScript, Express 5 |
+| Queue | BullMQ, Redis |
+| ORM | Prisma, PostgreSQL |
+| Real-time | Socket.io, `@socket.io/redis-adapter`, `@socket.io/redis-emitter` |
+| Validation | Zod |
+| Testing | Jest, Supertest |
+| Delivery | Docker, Docker Compose, GitHub Actions, Trivy |
 
 ---
 
 ## Architecture
 
+![NodeFlow Architecture](nodeflow_architecture.svg)
+
 ```
-┌──────────────┐    ┌────────────────────────────────────────────────┐
-│   Client     │    │               NodeFlow API (Express)            │
-│              │    │  /v1/jobs  /v1/webhooks  /v1/files  /v1/api-keys│
-└──────┬───────┘    └──────────────────────┬─────────────────────────┘
-       │                                   │
-       │  REST + WebSocket                 │
-       │                                   ▼
-       │                         ┌─────────────────┐
-       │                         │   BullMQ Queues  │
-       │                         │  (Redis-backed)  │
-       │                         └────────┬─────────┘
-       │                                  │
-       │                         ┌────────▼─────────┐
-       │                         │     Workers       │
-       │                         │  jobProcessing    │
-       │                         │  webhookDispatch  │
-       │                         │  fileProcessing   │
-       │                         └────────┬─────────┘
-       │                                  │
-       ▼                         ┌────────▼─────────┐
-  Socket.io ◄──── Redis ────────►│  Postgres (Prisma)│
-  (real-time)   pub/sub          └──────────────────┘
+Client
+  │
+  ▼
+Express API (port 4000)
+  │── POST /v1/jobs      → validates, writes Job to DB, enqueues to BullMQ
+  │── GET  /v1/jobs/:id  → reads job state from PostgreSQL
+  │── Socket.io server   → pushes real-time status events to connected clients
+  │── Bull Board         → /admin/queues visual dashboard
+  │── Swagger UI         → /docs
+  │
+  └──► Redis (BullMQ queues: job-processing, webhook-dispatch, file-processing)
+         │
+         ▼
+    BullMQ Worker Process
+         │── picks up job from queue
+         │── updates DB state (RUNNING → SUCCEEDED / FAILED)
+         │── emits job:status via Redis pub/sub → forwarded to Socket.io clients
+         │── dispatches webhook delivery
+         │── writes structured logs to PostgreSQL
+         ▼
+    PostgreSQL — durable state: jobs, logs, webhooks, deliveries, files, API keys
 ```
 
-**Stack:** Node.js · TypeScript · Express 5 · BullMQ · Socket.io · Prisma · PostgreSQL · Redis
+The API and Worker share no memory and hold no references to each other. This is the same shape as a Kubernetes deployment: two separate Deployments, one managed Redis, one managed database.
 
 ---
 
-## Features at a Glance
+## API Surface
 
-| Feature | Details |
-|---|---|
-| Job Queue | BullMQ with DB-backed state (QUEUED → RUNNING → SUCCEEDED/FAILED) |
-| Structured Logs | Per-job log entries with level, message, metadata |
-| Real-time | Socket.io with Redis adapter for cross-process pub/sub |
-| Webhooks | HMAC-SHA256 signed payloads, exponential backoff retries, circuit breaker |
-| File Upload | Multipart with Multer, pluggable storage (Local / S3 interface) |
-| Auth | API Key authentication with SHA-256 hashed storage |
-| Rate Limiting | Redis sliding window, configurable per route |
-| Idempotency | `Idempotency-Key` header support for POST/PATCH |
-| Observability | Bull Board dashboard at `/admin/queues`, Swagger at `/docs` |
-| CI/CD | GitHub Actions with lint, build, test, Docker build, Trivy scan |
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Service health |
+| `POST` | `/v1/jobs` | Submit a job |
+| `GET` | `/v1/jobs` | List jobs (cursor pagination) |
+| `GET` | `/v1/jobs/:id` | Get job by ID |
+| `DELETE` | `/v1/jobs/:id` | Cancel a queued job |
+| `GET` | `/v1/jobs/:id/logs` | Get structured job logs |
+| `POST` | `/v1/files` | Upload a file |
+| `GET` | `/v1/files` | List files |
+| `GET` | `/v1/files/:id` | Get file metadata |
+| `GET` | `/v1/files/:id/download` | Download file |
+| `DELETE` | `/v1/files/:id` | Delete file |
+| `POST` | `/v1/webhooks` | Register a webhook endpoint |
+| `GET` | `/v1/webhooks` | List webhooks |
+| `GET` | `/v1/webhooks/:id` | Get webhook |
+| `PATCH` | `/v1/webhooks/:id` | Update webhook |
+| `DELETE` | `/v1/webhooks/:id` | Delete webhook |
+| `GET` | `/admin/queues` | Bull Board dashboard |
+| `GET` | `/docs` | Swagger UI |
 
 ---
 
-## Quick Start
+## Local Development
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+
+**Prerequisites:** Docker Desktop and Node.js 20+
 
-### Local Development
+Copy the example env file:
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/cypher682/nodeflow-api.git
-cd nodeflow-api
-npm install
-
-# 2. Start infrastructure
-docker compose up -d postgres redis
-
-# 3. Run Prisma migrations
-npx prisma migrate dev
-
-# 4. Start API server
-npm run dev
-
-# 5. Start worker process (separate terminal)
-npm run dev:worker
-```
-
-The API will be available at `http://localhost:4000`.
-
-### Production (Docker Compose)
-
-```bash
-# Copy and configure environment
 cp .env.example .env
-
-# Start everything
-docker compose -f docker-compose.prod.yml up -d
-
-# Run DB migrations
-docker compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 ```
 
----
-
-## API Endpoints
-
-### Health
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | Liveness probe |
-
-### Jobs
-| Method | Path | Description |
-|---|---|---|
-| POST | `/v1/jobs` | Create a job |
-| GET | `/v1/jobs` | List jobs (cursor paginated) |
-| GET | `/v1/jobs/:id` | Get job details |
-| GET | `/v1/jobs/:id/logs` | Get structured job logs |
-| DELETE | `/v1/jobs/:id` | Cancel a job |
-
-### Webhooks
-| Method | Path | Description |
-|---|---|---|
-| POST | `/v1/webhooks` | Register a webhook endpoint |
-| GET | `/v1/webhooks` | List webhooks |
-| GET | `/v1/webhooks/:id` | Get webhook details |
-| PATCH | `/v1/webhooks/:id` | Update webhook (url, events, active) |
-| DELETE | `/v1/webhooks/:id` | Delete webhook |
-| GET | `/v1/webhooks/:id/deliveries` | List delivery history |
-
-### Files
-| Method | Path | Description |
-|---|---|---|
-| POST | `/v1/files` | Upload a file (multipart/form-data) |
-| GET | `/v1/files` | List files |
-| GET | `/v1/files/:id` | Get file metadata |
-| GET | `/v1/files/:id/download` | Download file |
-| DELETE | `/v1/files/:id` | Soft-delete file |
-
-### API Keys
-| Method | Path | Description |
-|---|---|---|
-| POST | `/v1/bootstrap` | Generate a dev API key instantly (dev only) |
-| POST | `/v1/api-keys` | Create key (returns raw key once) |
-| GET | `/v1/api-keys` | List keys (masked) |
-| DELETE | `/v1/api-keys/:id` | Revoke key |
-
-### Admin
-| Path | Description |
-|---|---|
-| `/admin/queues` | Bull Board queue dashboard |
-| `/docs` | Swagger UI |
-
----
-
-## Webhook Security
-
-All webhook deliveries include:
-```
-X-Nodeflow-Signature: sha256=<hmac-hex>
-X-Nodeflow-Event:     job.completed
-X-Nodeflow-Delivery-Id: <uuid>
-```
-
-Verify on your server:
-```typescript
-import { createHmac } from "node:crypto";
-
-const signature = createHmac("sha256", webhookSecret)
-  .update(rawBody)
-  .digest("hex");
-
-if (`sha256=${signature}` !== req.headers["x-nodeflow-signature"]) {
-  return res.status(401).end();
-}
-```
-
----
-
-## Testing
+Start PostgreSQL and Redis:
 
 ```bash
-npm run test              # All tests
-npm run test:coverage     # With coverage report
-npm run lint              # ESLint
-npm run build             # TypeScript compile
+docker compose up -d postgres redis
 ```
 
-**Test suites (31 tests across 7 suites):**
-- `health.test.ts` — Liveness probe
-- `jobs.test.ts` — Job CRUD & lifecycle routes
-- `workers.test.ts` — Handler registry & job processing logic
-- `socket.test.ts` — WebSocket real-time event lifecycle
-- `webhooks.test.ts` — Webhook CRUD routes
-- `files.test.ts` — File upload & download routes
-- `cross-cutting.test.ts` — Auth, rate limiting, idempotency, API versioning
+Install dependencies and run migrations:
+
+```bash
+npm install
+npx prisma generate
+npx prisma migrate deploy
+```
+
+Start the API and Worker:
+
+```bash
+npm run dev         # API on port 4000
+npm run dev:worker  # Worker in a second terminal
+```
+
+Open:
+
+```
+http://localhost:4000/docs         — Swagger UI
+http://localhost:4000/admin/queues — Bull Board
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+Run linter and TypeScript check:
+
+```bash
+npm run lint
+npm run build
+```
 
 ---
 
-## Environment Variables
+## Key Implementation Decisions
 
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `4000` | Server port |
-| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
-| `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origin |
-| `LOG_LEVEL` | `info` | Winston log level |
-| `STORAGE_PROVIDER` | `local` | `local` or `s3` |
-| `API_BASE_URL` | `http://localhost:4000` | Public base URL (used in Swagger) |
+**Two-process architecture, not a background thread**
+The API and Worker are separate `node` processes. They share no memory and have no imports of each other. Redis is the only channel between them. This makes the Worker independently scalable and directly maps to a Kubernetes multi-Deployment pattern.
+
+**Cross-process Socket.io via Redis pub/sub**
+The WebSocket server lives in the API process. The Worker has no access to it. `@socket.io/redis-emitter` lets the Worker publish events into Redis; `@socket.io/redis-adapter` on the API subscribes and forwards to the correct WebSocket room. Neither process references the other. The same setup works across multiple API pods in Kubernetes without changing application code.
+
+**Redis circuit breaker for webhook delivery**
+Exponential backoff handles transient failures. But if an endpoint is completely dead, retrying with backoff still fires requests into the void. The circuit breaker tracks consecutive failures per URL in Redis. After 5 failures, the circuit opens for 5 minutes — deliveries skip the HTTP call entirely and fail immediately. Success clears the counter. This is the same pattern used in production service meshes, implemented at the application layer.
+
+**Idempotency via `res.json()` interception**
+The idempotency middleware wraps `res.json()` to capture the response after it runs, then stores `(hashedKey, userId, status, body)` in Postgres asynchronously. On a duplicate request, the stored response is returned before the handler runs. No side effects replay. This is the same pattern Stripe uses for payment safety.
+
+**API keys stored as SHA-256 hashes**
+The raw API key is shown to the user once at creation and never stored. Every authenticated request re-hashes the presented key and looks it up. If the database is compromised, no plaintext keys are exposed.
 
 ---
 
-## Note on Repository Contents
+## CI/CD
 
-This repository strictly contains only the source code and configuration files necessary to build and run the NodeFlow API. Temporary files, external UI test scripts, or local testing artifacts (like downloaded markdown files) are deliberately excluded via `.gitignore` to maintain a clean, production-ready codebase.
+Workflow: `.github/workflows/ci.yml`
+
+| Job | What it does |
+|---|---|
+| `lint-and-test` | ESLint, TypeScript compile, Jest with live Postgres + Redis service containers |
+| `docker-build` | Multi-stage API image build, multi-stage Worker image build, Trivy scan on both |
+| `deploy` | Railway deploy stub — requires `RAILWAY_TOKEN` secret |
+
+---
+
+## Security Notes
+
+- API keys stored as SHA-256 hashes — raw key never persisted after creation
+- Webhook payloads signed with HMAC-SHA256 — receivers can verify authenticity
+- Rate limiting returns standard `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` headers
+- Idempotency keys hashed with userId — keys from different users do not collide
+- `.env` is gitignored and must not be committed
+
+---
+
+## Deployment
+
+Railway deployment is prepared. CI has a deploy job that triggers on push to `main`.
+
+To activate: add `RAILWAY_TOKEN` as a repository secret and configure service IDs.
+
+Live URL: not deployed yet.
+
+---
+
+## Evidence
+
+| Evidence | Location |
+|---|---|
+| Architecture diagram | `nodeflow_architecture.svg` |
+| Swagger UI | `/docs` when running locally |
+| Bull Board | `/admin/queues` when running locally |
