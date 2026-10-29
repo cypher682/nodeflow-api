@@ -4,6 +4,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# The production template is documentation, not a secret — the real deploy/.env stays ignored.
+!deploy/.env.prod.example
 *.log
 logs/
 uploads/

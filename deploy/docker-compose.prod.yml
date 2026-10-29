@@ -1,0 +1,123 @@
+# Production stack for nodeflow-api on the Oracle VM (arm64).
+#
+# Both images are built and pushed by .github/workflows/deploy.yml — nothing is built on the server.
+# Secrets live in /opt/apps/nodeflow/.env on the host (chmod 600). This file stays public.
+#
+# No ports are published: Caddy is the only thing on 80/443 and reaches the API over the shared
+# "web" network. Postgres and Redis sit on an internal-only network.
+#
+#   docker compose pull && docker compose up -d
+#
+# IMAGE_TAG pins the deployed commit (exported by the deploy workflow); "latest" is the fallback for
+# a manual start. To roll back, set IMAGE_TAG to the previous commit sha.
+
+name: nodeflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nodeflow-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is missing from .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is missing from .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nodeflow-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+  api:
+    image: ${IMAGE:-ghcr.io/cypher682/nodeflow-api}:${IMAGE_TAG:-latest}
+    container_name: nodeflow-api
+    # Migrations run against the real database before the process takes traffic, the same way the
+    # dev compose file does it. If the schema is behind, the container exits and compose --wait fails.
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      STORAGE_PROVIDER: local
+      # Service names, not localhost: these override anything inherited from .env.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+    expose:
+      - "4000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - internal
+      - web
+    restart: unless-stopped
+
+  worker:
+    image: ${WORKER_IMAGE:-ghcr.io/cypher682/nodeflow-api-worker}:${IMAGE_TAG:-latest}
+    container_name: nodeflow-worker
+    command: ["node", "dist/workers/index.js"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      STORAGE_PROVIDER: local
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      api:
+        condition: service_healthy
+    # No HTTP surface, so liveness is the worker process itself. Without this, compose --wait would
+    # report success for a worker that died on startup and the deploy would look green.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'dist/workers/index.js' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - internal
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+
+networks:
+  # Created once by the Caddy stack: docker network create web
+  web:
+    external: true
+  internal:
+    internal: true

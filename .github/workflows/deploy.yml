@@ -1,0 +1,191 @@
+# CD — build once after CI is green, push both images to GHCR, ship them to the Oracle VM over SSH.
+#
+# Flow: push to main -> "NodeFlow CI" runs -> this workflow fires only if it succeeded.
+# workflow_dispatch redeploys the current main HEAD manually.
+#
+# Required repository secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY.
+# Optional: DEPLOY_PORT (default 22), GHCR_USER + GHCR_TOKEN (only if the packages are private).
+# Application secrets are NOT here — they live in /opt/apps/nodeflow/.env on the server.
+#
+# Setup and rollback: docs/deployment/vps-caddy.md
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["NodeFlow CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-nodeflow
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  # Repo is cypher682/nodeflow-api, so the two images become nodeflow-api and nodeflow-api-worker.
+  IMAGE: ghcr.io/${{ github.repository }}
+  WORKER_IMAGE: ghcr.io/${{ github.repository }}-worker
+  PUBLIC_URL: https://nodeflow.141-148-69-94.sslip.io
+  REMOTE_DIR: /opt/apps/nodeflow
+
+jobs:
+  build-and-push:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    # The VM is arm64 (Ampere A4); build for that platform or it won't start there.
+    env:
+      TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: runtime
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.TAG }}
+            ${{ env.IMAGE }}:latest
+          # Separate cache scopes: the two images share layers but not the final stage, and one
+          # shared scope makes each build fight the other over the cache.
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.worker
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.WORKER_IMAGE }}:${{ env.TAG }}
+            ${{ env.WORKER_IMAGE }}:latest
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+
+  deploy:
+    name: Deploy to Oracle VM
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY" || { echo "::error::DEPLOY_SSH_KEY is empty"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/nodeflow_deploy
+          chmod 600 ~/.ssh/nodeflow_deploy
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "Pinned host key for ${DEPLOY_HOST}:${DEPLOY_PORT:-22}"
+
+      - name: Upload compose file
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/nodeflow_deploy \
+              -P "${DEPLOY_PORT:-22}" \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              deploy/docker-compose.prod.yml \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/docker-compose.yml"
+          echo "Compose file synced to ${REMOTE_DIR}"
+
+      - name: Pull, restart, wait for health
+        env:
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/nodeflow_deploy \
+              -p "${DEPLOY_PORT:-22}" \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "IMAGE_TAG='${TAG}' GHCR_USER='${GHCR_USER}' GHCR_TOKEN='${GHCR_TOKEN}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/apps/nodeflow
+
+          # Private package? Then log in. Public packages: GHCR_TOKEN is empty and this is skipped.
+          if [ -n "${GHCR_TOKEN:-}" ]; then
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-github-actions}" --password-stdin
+          fi
+
+          echo "Deploying image tag ${IMAGE_TAG}"
+          docker compose pull
+
+          if ! docker compose up -d --remove-orphans --wait --wait-timeout 240; then
+            echo "--- compose ps ---"
+            docker compose ps
+            echo "--- api logs ---"
+            docker compose logs --tail 100 api
+            echo "--- worker logs ---"
+            docker compose logs --tail 50 worker
+            exit 1
+          fi
+
+          docker compose ps
+
+          # /health returns a constant and would stay green with a dead database. `migrate status`
+          # talks to Postgres and exits non-zero if the schema is behind, so it is the real gate.
+          docker compose exec -T api npx prisma migrate status
+
+          # Keep a week of previous sha tags on the host so a rollback is instant; GHCR holds
+          # every tag regardless, so "up" can still pull anything older.
+          docker image prune -f --filter "until=168h" >/dev/null
+          REMOTE
+
+      - name: Verify the public endpoint
+        run: |
+          set -uo pipefail
+          for _ in $(seq 1 30); do
+            status=$(curl -sS -o /tmp/health.json -w '%{http_code}' -m 10 "$PUBLIC_URL/health" 2>/dev/null || true)
+            if [ "$status" = "200" ]; then
+              cat /tmp/health.json
+              echo
+              # swagger-ui-express answers /docs with a 301 to /docs/, so follow it.
+              docs=$(curl -sSL -o /dev/null -w '%{http_code}' -m 10 "$PUBLIC_URL/docs" 2>/dev/null || true)
+              echo "/docs -> $docs"
+              [ "$docs" = "200" ] || { echo "::error::$PUBLIC_URL/docs returned $docs"; exit 1; }
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::$PUBLIC_URL/health did not return 200 (last status: ${status:-no response})."
+          echo "First deploy needs the Caddy block from deploy/Caddyfile.snippet — see docs/deployment/vps-caddy.md"
+          exit 1

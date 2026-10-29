@@ -18,5 +18,8 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+# The worker imports services/files.service.ts, which imports lib/storage.ts and creates
+# <cwd>/uploads at import time. It must be writable by nodeflow or startup logs an error.
+RUN mkdir -p /app/uploads && chown -R nodeflow:nodeflow /app/uploads
 USER nodeflow
 CMD ["node", "dist/workers/index.js"]

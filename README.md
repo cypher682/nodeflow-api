@@ -170,13 +170,25 @@ The raw API key is shown to the user once at creation and never stored. Every au
 
 ## CI/CD
 
-Workflow: `.github/workflows/ci.yml`
+Two workflows, deliberately split so a red CI run can never ship an image.
+
+`.github/workflows/ci.yml` — **NodeFlow CI**
 
 | Job | What it does |
 |---|---|
 | `lint-and-test` | ESLint, TypeScript compile, Jest with live Postgres + Redis service containers |
 | `docker-build` | Multi-stage API image build, multi-stage Worker image build, Trivy scan on both |
-| `deploy` | Railway deploy stub — requires `RAILWAY_TOKEN` secret |
+
+`.github/workflows/deploy.yml` — **Deploy** (fires on `workflow_run` of a successful CI, or by hand)
+
+| Job | What it does |
+|---|---|
+| `build-and-push` | Builds both images for `linux/arm64` and pushes `:<sha>` + `:latest` to GHCR |
+| `deploy` | `scp`s the compose file, `docker compose pull && up -d --wait`, then gates on `prisma migrate status` |
+| — | Final step polls the public `/health` and `/docs`; the run fails if the site is not serving |
+
+Trivy is currently advisory (`exit-code: '0'`); see the deployment runbook for how to make it
+blocking.
 
 ---
 
@@ -192,11 +204,17 @@ Workflow: `.github/workflows/ci.yml`
 
 ## Deployment
 
-Railway deployment is prepared. CI has a deploy job that triggers on push to `main`.
+Deployed to an Oracle Cloud ARM VM behind Caddy, built in CI and pulled from GHCR — nothing is
+built on the server. `deploy/docker-compose.prod.yml` is the production stack: API, worker,
+Postgres and Redis, with Postgres and Redis on an internal-only network and the API reachable only
+through Caddy.
 
-To activate: add `RAILWAY_TOKEN` as a repository secret and configure service IDs.
+- **Runbook:** [`docs/deployment/vps-caddy.md`](docs/deployment/vps-caddy.md)
+- **URL:** `https://nodeflow.141-148-69-94.sslip.io` (sslip.io, so no DNS record is needed)
+- **Required secrets:** `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
 
-Live URL: not deployed yet.
+`/admin/queues` is blocked at the proxy: Bull Board has no authentication and would otherwise expose
+queue controls publicly. It stays available on `localhost:4000` when running the dev compose stack.
 
 ---
 

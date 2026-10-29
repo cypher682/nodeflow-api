@@ -1,4 +1,6 @@
-name: CI/CD
+# CI only. Deployment lives in deploy.yml, which fires on this workflow's success
+# (workflow_run), so a red run here can never ship an image.
+name: NodeFlow CI
 
 on:
   push:
@@ -92,15 +94,3 @@ jobs:
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
-
-  deploy:
-    name: Deploy to Railway
-    needs: docker-build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Trigger Railway Deploy
-        run: |
-          echo "Railway deployment would be triggered here using RAILWAY_TOKEN"
-          # curl -X POST "https://backboard.railway.app/graphql/v2" -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" ...
